@@ -1,0 +1,25 @@
+{
+  "name": "gundb-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "fs": "^0.0.1-security",
+    "gun": "^0.2020.1240",
+    "helmet": "^8.0.0",
+    "loader": "^2.1.1",
+    "nocache": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0"
+  }
+}
