@@ -48,13 +48,13 @@ console.log("init gun");
 // event listeners
 gun.on("out", { get: { "#": { "*": "" } } });
 gun.on("put", function (msg) {
-    console.log("Data being saved:", msg);
+    console.log("Data being saved");
 });
 gun.on("hi", (peer) => {
-    console.log("Peer connected:", peer);
+    console.log("Peer connected");
 });
 gun.on("bye", (peer) => {
-    console.log("Peer disconnected:", peer);
+    console.log("Peer disconnected");
 });
 // connect to mongoo and gun
 // mongoose
