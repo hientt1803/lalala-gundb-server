@@ -1,6 +1,6 @@
 {
   "name": "gundb-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
@@ -23,6 +23,7 @@
     "gun": "^0.2020.1240",
     "helmet": "^8.0.0",
     "loader": "^2.1.1",
+    "mongoose": "^8.8.1",
     "nocache": "^4.0.0",
     "view": "^1.1.1"
   },

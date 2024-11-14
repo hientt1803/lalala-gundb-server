@@ -1,25 +1,39 @@
-import express from "express";
 import bodyParser from "body-parser";
-import helmet from "helmet";
 import cors from "cors";
+import express, { Response } from "express";
+import { rateLimit } from "express-rate-limit";
+import helmet from "helmet";
+import mongoose from "mongoose";
+import { corsOptions } from "./securities/cors";
+import { addNewRecordToHotel } from "./services/hotel-services";
 
 const Gun = require("gun");
-import { rateLimit } from "express-rate-limit";
-import { corsOptions } from "./cors";
-
-// require("gun-mongo");
-// require("gun-mongo-key");
-
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const APP_DOMAIN =
+  process.env.NODE_ENV === "production"
+    ? process.env.APP_DOMAIN
+    : "http://localhost:3000";
 
 // middleware & config
 app.set("view engine", "ejs");
 
 // helmet for cors
-app.use(helmet({}));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", APP_DOMAIN],
+      },
+    },
+    referrerPolicy: {
+      policy: "no-referrer",
+    },
+  })
+);
 
 // limit request
 const limiter = rateLimit({
@@ -27,7 +41,7 @@ const limiter = rateLimit({
   limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
   standardHeaders: "draft-7", // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
-  // store: ... , // Redis, Memcached, etc. See below.
+  // store: ... , // Redis, Memcached, etc. See below. more options here
 });
 
 app.use(limiter);
@@ -39,105 +53,77 @@ app.use(Gun.serve);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-// init server
-const listener = app.listen(PORT, function () {
-  console.log("Your app is listening on port " + PORT);
-});
+// Connect MongoDB
+mongoose
+  .connect(process.env.MONGODB_URL)
+  .then(() => {
+    console.log("Connected to MongoDB");
 
-const gunconfig = {
-  web: listener,
-  file: "data.json",
-  radisk: true,
-};
+    const listener = app.listen(PORT, function () {
+      console.log("Your app is listening on port " + PORT);
+    });
 
-// init gun
-const gun = Gun(gunconfig);
-console.log("init gun");
+    const gunconfig = {
+      web: listener,
+      file: "data.json",
+    };
 
-// event listeners
-gun.on("out", { get: { "#": { "*": "" } } });
+    // init gun
+    const gun = Gun(gunconfig);
+    console.log("init gun");
 
-gun.on("put", function (msg: any) {
-  console.log("Data being saved");
-});
+    // GUN event listeners
+    gun.on("out", { get: { "#": { "*": "" } } });
 
-gun.on("hi", (peer: any) => {
-  console.log("Peer connected");
-});
+    gun.on("put", async function (msg: any) {
+      try {
+        const searchKey: string = msg.put["#"];
 
-gun.on("bye", (peer: any) => {
-  console.log("Peer disconnected");
-});
+        if (!searchKey || !searchKey.startsWith("lalalaDatabase/")) {
+          return;
+        }
 
-// connect to mongoo and gun
-// mongoose
-//   .connect(MONGODB_URL!)
-//   .then(() => {
-//     console.log("MongoDB connected successfully!");
-// Debug và verify storage route
-// app.get("/test-storage", async (req: any, res: any) => {
-//   const testKey = "test-" + Date.now();
-//   const testData = { hello: "world" };
+        const data = msg.put[":"];
 
-//   gun.get(testKey).put(testData);
+        if (typeof data !== "string") {
+          return;
+        }
 
-//   setTimeout(async () => {
-//     const hotel = new Hotel({
-//       id: testKey,
-//       searchKey: "Awesome Post!",
-//       data: "awesome-post",
-//       createdAt: new Date(),
-//       updatedAt: new Date(),
-//     });
+        const parsedData = JSON.parse(data);
 
-//     await hotel.save();
+        if (
+          !parsedData ||
+          !parsedData.hotels ||
+          !Array.isArray(parsedData.hotels)
+        ) {
+          return;
+        }
 
-//     const searchedData = await Hotel.findById(hotel.id).exec();
-//     // const mongoData = await mongoose.connection
-//     //   .collection("lalala")
-//     //   .findOne({ key: testKey });
+        // Process only valid data
+        // console.log(searchKey.split("/")[1]);
+        // console.log(parsedData);
 
-//     console.log(hotel);
-//     console.log(searchedData);
+        await addNewRecordToHotel(
+          searchKey.split("/")[1],
+          JSON.stringify(parsedData)
+        );
+      } catch (error) {
+        // Just ignore errors silently or log if needed
+        // console.error("Error processing put message:", error);
+      }
+    });
 
-//     res.json({
-//       gunData: await new Promise((resolve) => {
-//         gun.get(testKey).once((data: unknown) => resolve(data));
-//       }),
-//       hotel,
-//     });
-//   }, 1000);
-// });
+    gun.on("hi", (peer: any) => {
+      console.log("Peer connected");
+    });
 
-// // Health check endpoint
-// app.get("/health", (req: any, res: any) => {
-//   const health = {
-//     uptime: process.uptime(),
-//     message: "OK",
-//     timestamp: Date.now(),
-//     // connections: gun._.opt.peers.length,
-//     connectDatabase: gun,
-//   };
-//   res.status(200).send(health);
-// });
-// })
-// .catch((error: any) => {
-//   console.error("MongoDB connection error:", error);
-//   process.exit(1);
-// });
-
-// MongoDB event listeners
-// mongoose.connection.on("error", (err: any) => {
-//   console.error("MongoDB error:", err);
-// });
-
-// mongoose.connection.on("disconnected", () => {
-//   console.log("MongoDB disconnected");
-// });
-
-// mongoose.connection.on("connected", () => {
-//   console.log("MongoDB connected");
-// });
+    gun.on("bye", (peer: any) => {
+      console.log("Peer disconnected");
+    });
+  })
+  .catch((err) => {
+    console.log("Error connecting to MongoDB:", err);
+  });
 
 // Error handling
 process.on("unhandledRejection", (reason, promise) => {
@@ -145,6 +131,6 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 // Root route
-app.get("/", function (request: any, response: any) {
+app.get("/", function (response: Response) {
   response.status(200).json("SERVER IS RUNNING NOW");
 });
