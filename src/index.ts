@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 8080;
 const APP_DOMAIN =
   process.env.NODE_ENV === "production"
     ? process.env.APP_DOMAIN
-    : "http://localhost:3000";
+    : process.env.LOCAL_DOMAIN;
 
 // middleware & config
 app.set("view engine", "ejs");
@@ -25,20 +25,26 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'"],
+        defaultSrc: ["'self'", APP_DOMAIN],
         scriptSrc: ["'self'", APP_DOMAIN],
       },
     },
     referrerPolicy: {
       policy: "no-referrer",
     },
+    // disable DNS Prefetching
+    xDnsPrefetchControl: {
+      allow: false,
+    },
+    // prevent mime types sniffing
+    noSniff: false,
   })
 );
 
 // limit request
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+  limit: 200, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
   standardHeaders: "draft-7", // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
   // store: ... , // Redis, Memcached, etc. See below. more options here
@@ -61,6 +67,7 @@ mongoose
 
     const listener = app.listen(PORT, function () {
       console.log("Your app is listening on port " + PORT);
+      console.log("CORS allowed: ", APP_DOMAIN);
     });
 
     const gunconfig = {
@@ -114,7 +121,16 @@ mongoose
     });
 
     gun.on("hi", (peer: any) => {
-      console.log("Peer connected");
+      if (peer.wire.headers.origin !== APP_DOMAIN) {
+        console.log(
+          "Unauthorized peer attempted to connect:",
+          peer.wire.headers.origin
+        );
+
+        peer.wire.terminate();
+      } else {
+        console.log("Peer connected:", peer.wire.headers.origin);
+      }
     });
 
     gun.on("bye", (peer: any) => {
