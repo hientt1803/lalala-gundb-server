@@ -8,6 +8,7 @@ import { corsOptions } from "./securities/cors";
 import { addNewRecordToHotel } from "./services/hotel-services";
 
 const Gun = require("gun");
+require('gun/lib/store');
 require("dotenv").config();
 
 const app = express();
@@ -73,6 +74,7 @@ mongoose
     const gunconfig = {
       web: listener,
       file: "data.json",
+      localStorage: true,
     };
 
     // init gun

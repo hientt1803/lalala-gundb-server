@@ -21,6 +21,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const cors_2 = require("./securities/cors");
 const hotel_services_1 = require("./services/hotel-services");
 const Gun = require("gun");
+require('gun/lib/store');
 require("dotenv").config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8080;
@@ -73,6 +74,7 @@ mongoose_1.default
     const gunconfig = {
         web: listener,
         file: "data.json",
+        localStorage: true,
     };
     // init gun
     const gun = Gun(gunconfig);
