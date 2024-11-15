@@ -17,3 +17,15 @@ export const addNewRecordToHotel = async (searchKey: string, data: string) => {
     console.log(error);
   }
 };
+
+export const findHotelBySearchKey = async (
+  searchKey: string
+): Promise<boolean> => {
+  try {
+    const exists = await Hotel.findOne({ searchKey });
+    return !!exists;
+  } catch (error) {
+    console.error("Error finding hotel by searchKey:", error);
+    return false;
+  }
+};
