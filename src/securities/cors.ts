@@ -1,6 +1,10 @@
 import cors from "cors";
 
 const whitelist = [process.env.APP_DOMAIN, process.env.LOCAL_DOMAIN];
+const secureConectDomain =
+  process.env.NODE_ENV === "production"
+    ? [process.env.APP_DOMAIN]
+    : [process.env.LOCAL_DOMAIN];
 
 // export const corsOptions: CorsOptions = {
 //   origin: function (origin, callback) {
@@ -16,7 +20,7 @@ const whitelist = [process.env.APP_DOMAIN, process.env.LOCAL_DOMAIN];
 export const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // if (whitelist.includes(origin as string) || !origin) {
-    if (whitelist.indexOf(origin || process.env.LOCAL_DOMAIN) !== -1) {
+    if (secureConectDomain.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
