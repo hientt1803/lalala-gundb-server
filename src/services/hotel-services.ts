@@ -29,3 +29,13 @@ export const findHotelBySearchKey = async (
     return false;
   }
 };
+
+export const findAllHotel = async (): Promise<boolean> => {
+  try {
+    const hotels = await Hotel.find();
+    console.log(hotels);
+  } catch (error) {
+    console.error("Error finding hotel by searchKey:", error);
+    return false;
+  }
+};

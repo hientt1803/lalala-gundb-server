@@ -5,6 +5,7 @@ import express, { Response } from "express";
 import rateLimit from "express-rate-limit";
 import helmet, { HelmetOptions } from "helmet";
 import mongoose from "mongoose";
+// import createGunRouter from "./routes/gun-route";
 import { corsOptions } from "./securities/cors";
 import { helmetOptions, limiterOptions } from "./securities/helmet";
 import { initializeGun, setupCleanup } from "./services/gun-service";
@@ -23,8 +24,9 @@ const APP_DOMAIN =
 app.use(helmet(helmetOptions(APP_DOMAIN) as HelmetOptions));
 app.use(rateLimit(limiterOptions));
 app.use(cors(corsOptions));
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 // MongoDB Connection
 async function connectToMongo() {
@@ -48,6 +50,8 @@ async function startServer() {
 
   const gun = initializeGun(listener);
   setupCleanup(gun);
+
+  // app.use("/api/gun", cors(corsOptions), createGunRouter(gun));
 
   process.on("unhandledRejection", (reason, promise) => {
     console.error("Unhandled Rejection:", reason);
